@@ -1,4 +1,4 @@
-from titanic_classification import __version__
+from dev_template import __version__
 
 
 def test_version() -> None:

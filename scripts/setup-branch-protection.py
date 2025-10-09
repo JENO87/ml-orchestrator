@@ -5,8 +5,8 @@ from typing import Any
 import requests
 
 # Configuration
-REPO_OWNER: str = "JENO87"
-REPO_NAME: str = "Titanic"
+REPO_OWNER: str = "Mr. Foo"
+REPO_NAME: str = "Foo"
 GITHUB_TOKEN: str | None = os.environ.get("GITHUB_PAT")
 if not GITHUB_TOKEN:
     raise ValueError("GITHUB_PAT environment variable not set")

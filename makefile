@@ -65,13 +65,13 @@ build-docker-image:
 	docker build -t titanic-classification:${DOCKER_TAG} .
 
 tag-docker-image:
-	docker tag titanic-classification:${DOCKER_TAG} ghcr.io/JensNorell/titanic-classification:${DOCKER_TAG}
+	docker tag titanic-classification:${DOCKER_TAG} ghcr.io/JensNorell/dev-template:${DOCKER_TAG}
 
 push-docker-image:
-	docker push ghcr.io/JensNorell/titanic-classification:${DOCKER_TAG}
+	docker push ghcr.io/JensNorell/dev-template:${DOCKER_TAG}
 
 clean-docker-image:
-	docker rmi titanic-classification:${DOCKER_TAG} ghcr.io/JensNorell/titanic-classification:${DOCKER_TAG} || true
+	docker rmi titanic-classification:${DOCKER_TAG} ghcr.io/JensNorell/dev-template:${DOCKER_TAG} || true
 
 notify:
 	gh issue comment 1 --body "Workflow ${STATUS} for commit ${GITHUB_SHA}. Check details at ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -95,8 +95,5 @@ install-gh:
 setup-branch-protection:
 	@powershell -Command "$env:PYTHONPATH='$(SRC)'; uv run python -m scripts/setup_branch_protection.py"
 
-eda:
-	@uv run python -m scripts/eda.py"
-
-preprocess:
-	@uv run scripts/preprocess.py"
+mock_script:
+	@uv run python -m scripts/mock_script.py

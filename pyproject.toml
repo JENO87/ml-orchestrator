@@ -1,8 +1,8 @@
 # Core project metadata (PEP 621). Defines package info for UV, pip, PyPI, GitHub Packages.
 [project]
-name = "titanic-classification"
+name = "dev-template"
 version = "0.1.0"
-description = "Python Project for classification of Titanic survival"
+description = "Development Template for any Python Project"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "MIT"
@@ -16,16 +16,11 @@ dependencies = [
     "python-dotenv",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-    "pandas>=2.0.0",
     "pyreadr>=0.5.0",
     "pyarrow>=15.0.0",
     "openpyxl>=3.0.0",
-    "numpy>=1.26.0",
     "pytz>=2023.3",
-    "seaborn>=0.13.0",
-    "matplotlib",
     "loguru",
-    "scikit-learn",
 ]
 
 [project.optional-dependencies]
@@ -37,9 +32,6 @@ dev = [
     "tqdm>=4.0.0",
     "pre-commit>=3.0.0",
     "docformatter>=1.7.7",
-    "pandas-stubs>=2.0.0",
-    "types-requests>=2.31.0.1",  # Type stubs for requests
-    "types-seaborn>=0.13.0.20240401",
     "pydantic>=2.8.2",
 
 ]
@@ -56,16 +48,16 @@ test = [
 #download_data = "scripts.download_data"
 
 [project.urls]
-"Homepage" = "https://github.com/your-username/titanic-classification"
-"Repository" = "https://github.com/your-username/titanic-classification"
-"Issues" = "https://github.com/your-username/titanic-classification/issues"
+"Homepage" = "https://github.com/your-username/dev-template"
+"Repository" = "https://github.com/your-username/dev-template"
+"Issues" = "https://github.com/your-username/dev-template/issues"
 
 [build-system]
 requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "src/titanic_classification/__init__.py"
+path = "src/dev_template/__init__.py"
 
 [tool.uv]
 package = true
@@ -87,14 +79,8 @@ no_implicit_reexport = true
 warn_return_any = true
 # Overrides for untyped modules
 [[tool.mypy.overrides]]
-module = ["titanic_classification.*"]
+module = ["dev_template.*"]
 ignore_missing_imports = true
-[[tool.mypy.overrides]]
-module = ["sklearn.*"]
-ignore_missing_imports = true
-[[tool.mypy.overrides]]
-module = "titanic_classification.eda.suggest_transformations"
-disable_error_code = "str-bytes-safe"
 [[tool.mypy.overrides]]
 module = ["loguru"]
 ignore_missing_imports = true
@@ -123,7 +109,7 @@ ignore = [
     "D401",
 ]
 [tool.ruff.lint.isort]
-known-first-party = ["titanic_classification"]
+known-first-party = ["dev_template"]
 combine-as-imports = true
 # Prefer | None over Optional[] for Python 3.10+
 force-single-line = false
@@ -133,7 +119,7 @@ convention = "numpy"
 [tool.pytest.ini_options]
 python_files = ["test_*.py"]
 testpaths = ["tests"]
-addopts = "--cov=titanic_classification --cov-report=xml"
+addopts = "--cov=dev_template --cov-report=xml"
 
 [dependency-groups]
 test = [

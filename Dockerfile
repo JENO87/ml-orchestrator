@@ -5,7 +5,7 @@ FROM ${BASE_IMAGE}
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir uv && uv pip install --no-cache-dir -r requirements.txt
-COPY src/titanic_classification/ .
+COPY src/dev_template/ .
 ENV PYTHONPATH=/app
 ENV PYTHONDONTWRITEBYTECODE=1
-CMD ["python", "-m", "titanic_classification"]
+CMD ["python", "-m", "dev_template"]
