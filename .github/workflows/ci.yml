@@ -124,7 +124,7 @@ jobs:
       - *editable-install
       - name: Extract version
         id: get-version
-        run: echo "VERSION=$(python -c 'from dev_template import __version__; print(__version__)')" >> $GITHUB_ENV
+        run: echo "VERSION=$(python -c 'from ml_orchestrator import __version__; print(__version__)')" >> $GITHUB_ENV
       - name: Build package
         run: make build-package
       - name: Upload package artifacts
