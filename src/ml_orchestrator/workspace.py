@@ -1,22 +1,25 @@
 """Provide GCP connection handling for Vertex AI and related services."""
+
+import os
 import re
 from datetime import datetime
 
-from google.api_core.exceptions import NotFound
-from google.cloud import aiplatform
-from google.cloud import storage
-from google.cloud import secretmanager  # New import for Secret Manager
-from google.oauth2 import service_account
 import google.auth
-from ml_orchestrator import logger  # Assuming a logger setup in your repo
+from google.api_core.exceptions import NotFound
+from google.cloud import (
+    aiplatform,
+    secretmanager,  # New import for Secret Manager
+    storage,
+)
+from google.oauth2 import service_account
 
-from ml_orchestrator.constants.environments import Env, DEPLOY_ENV_NAMES
-from ml_orchestrator.constants.workspace import VarWorkspaceResourceNames
+from ml_orchestrator import logger  # Assuming a logger setup in your repo
+from ml_orchestrator.configs.naming import VarProjectResourceNames
 
 PROJECT_ID_PATTERN = re.compile(r"^(.*)-(dev|stg|prod)$")  # Example pattern for project naming
 
 
-class GCPWorkspace:
+class GCPProject:
     """Setup connection to GCP (Vertex AI, etc.)."""
 
     _prefix: str
@@ -26,8 +29,7 @@ class GCPWorkspace:
     _secret_manager_client: secretmanager.SecretManagerServiceClient | None = None
 
     def __init__(self, from_config: bool = False):
-        """
-        Initialize GCPWorkspace.
+        """Initialize GCPWorkspace.
 
         Parameters
         ----------
@@ -39,43 +41,45 @@ class GCPWorkspace:
         self.env = Env()
         self.env.validate()  # Ensure env is ready
 
-        if GCPWorkspace._credentials is None:
+        if GCPProject._credentials is None:
             logger.debug("Initialize GCP credentials...")
-            GCPWorkspace._credentials = self._get_credentials()
+            GCPProject._credentials = self._get_credentials()
 
         aiplatform.init(
             project=self.env.project_id,
             location=self.env.location,
-            credentials=GCPWorkspace._credentials,
+            credentials=GCPProject._credentials,
         )
 
-        GCPWorkspace._storage_client = storage.Client(credentials=GCPWorkspace._credentials)
+        GCPProject._storage_client = storage.Client(credentials=GCPProject._credentials)
 
         # New: Initialize Secret Manager if project_id available
         secret_project = self.env.secret_manager_project_id or self.env.project_id
         if secret_project:
             logger.debug(f"Initialize Secret Manager client for project {secret_project}")
-            GCPWorkspace._secret_manager_client = secretmanager.SecretManagerServiceClient(credentials=GCPWorkspace._credentials)
+            GCPProject._secret_manager_client = secretmanager.SecretManagerServiceClient(
+                credentials=GCPProject._credentials
+            )
         else:
             logger.warning("No secret_manager_project_id or project_id set; skipping Secret Manager init.")
 
         self._prefix, self._deploy_env = self._get_prefix_and_deploy_env()
-        self.resources = VarWorkspaceResourceNames(prefix=self._prefix, deploy_env=self._deploy_env)
+        self.resources = VarProjectResourceNames(prefix=self._prefix, deploy_env=self._deploy_env)
 
     @property
     def credentials(self) -> google.auth.credentials.Credentials | None:
         """Get the GCP credentials."""
-        return GCPWorkspace._credentials
+        return GCPProject._credentials
 
     @property
     def storage_client(self) -> storage.Client | None:
         """Get the Cloud Storage client."""
-        return GCPWorkspace._storage_client
+        return GCPProject._storage_client
 
     @property
     def secret_manager_client(self) -> secretmanager.SecretManagerServiceClient | None:
         """Get the Secret Manager client."""
-        return GCPWorkspace._secret_manager_client
+        return GCPProject._secret_manager_client
 
     @property
     def prefix(self) -> str:
@@ -86,6 +90,16 @@ class GCPWorkspace:
     def deploy_env(self) -> str:
         """Get the deploy environment."""
         return self._deploy_env
+
+    def _get_credentials(self) -> google.auth.credentials.Credentials:
+        """Get GCP credentials."""
+        if self.env.service_account_key_path:
+            logger.info("Using service account key from GOOGLE_APPLICATION_CREDENTIALS.")
+            return service_account.Credentials.from_service_account_file(self.env.service_account_key_path)
+        else:
+            logger.info("Using Application Default Credentials (ADC).")
+            creds, _ = google.auth.default()
+            return creds
 
     def get_secret(self, secret_name: str, version: str = "latest", fallback_env_var: str | None = None) -> str | None:
         """Retrieve a secret from Secret Manager, with optional env var fallback."""
@@ -124,19 +138,8 @@ class GCPWorkspace:
         """Get a path-friendly version from current UTC datetime."""
         return datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S-%f")
 
-    def _get_credentials(self) -> google.auth.credentials.Credentials:
-        """Get GCP credentials."""
-        if self.env.service_account_key_path:
-            logger.info("Using service account key from GOOGLE_APPLICATION_CREDENTIALS.")
-            return service_account.Credentials.from_service_account_file(self.env.service_account_key_path)
-        else:
-            logger.info("Using Application Default Credentials (ADC).")
-            creds, _ = google.auth.default()
-            return creds
-
     def _get_prefix_and_deploy_env(self) -> tuple[str, str]:
-        """
-        Get prefix and deploy env from project ID or env vars.
+        """Get prefix and deploy env from project ID or env vars.
 
         Assumes project ID like 'prefix-deploy_env' if patterned.
         """

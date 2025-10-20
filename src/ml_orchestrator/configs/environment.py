@@ -1,9 +1,11 @@
 """Dataclass to load and hold general environment variables for GCP."""
+
 import os
 from dataclasses import dataclass
 
 # The deploy environment names (adapt as needed)
 DEPLOY_ENV_NAMES: list[str] = ["dev", "stg", "prod"]
+
 
 @dataclass(frozen=True)
 class Env:

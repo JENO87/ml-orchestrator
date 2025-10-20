@@ -1,11 +1,14 @@
 """Provide functions and classes for GCP resource names."""
+
 from dataclasses import dataclass, field
 
-from ml_orchestrator.constants.environments import Env, DEPLOY_ENV_NAMES
+from ml_orchestrator.configs.environment import DEPLOY_ENV_NAMES
+
+WORKSPACE_DEFAULT_GCS_BUCKET: str = "workspacegcpbucket"
 
 
 @dataclass
-class VarWorkspaceResourceNames:
+class VarProjectResourceNames:
     """
     Various names of GCP resources.
 
