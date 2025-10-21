@@ -30,6 +30,8 @@ dev = [
     "flake8>=6.0.0",
     "pre-commit>=3.5.0",
     "docformatter>=1.7.7",
+    "Jinja2>=3.1.0",
+    "google-cloud-storage>=2.1.0",
 ]
 test = [
     "mypy>=1.11.0",
@@ -55,26 +57,10 @@ path = "src/ml_orchestrator/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ml_orchestrator"]
 
-[dependency-groups]
-dev = [
-    "pytest>=7.4.0",
-    "black>=24.3.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
-    "pre-commit>=3.5.0",
-    "docformatter>=1.7.7",
-]
-test = [
-    "mypy>=1.11.0",
-    "pylint>=3.0.0",
-    "ruff>=0.6.0",
-    "pytest>=7.4.0",
-    "pytest-cov>=5.0.0",
-    "pytest-mock>=3.0.0",
-]
+
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 strict = true
 warn_unused_configs = true
 warn_redundant_casts = true
@@ -88,7 +74,7 @@ disallow_any_generics = true
 no_implicit_reexport = true
 warn_return_any = true
 [[tool.mypy.overrides]]
-module = ["ml_orchestrator.*", "loguru", "kfp.*", "google.*"]
+module = ["ml_orchestrator.*", "loguru", "kfp.*", "google.*", "jinja2"]
 ignore_missing_imports = true
 
 [tool.pylint.messages_control]
@@ -103,7 +89,7 @@ max-line-length = 120
 fail-under = 9.0
 
 [tool.ruff]
-line-length = 120
+line-length = 88
 exclude = ["notebooks"]
 
 [tool.ruff.lint]
@@ -117,11 +103,8 @@ known-first-party = ["ml_orchestrator"]
 combine-as-imports = true
 force-single-line = false
 
-[tool.black]
-line-length = 88
-
-[tool.isort]
-profile = "black"
+[tool.ruff.format]
+quote-style = "double"
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
