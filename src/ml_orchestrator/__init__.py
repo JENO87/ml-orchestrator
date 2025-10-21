@@ -8,11 +8,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from .configs import Env, PipelineConfig, TaskSettings, VarProjectResourceNames
+from .configs import Env, PipelineSettings, TaskSettings, VarProjectResourceNames
 from .pipeline_assembly import GenericPipeline
+from .project import GCPProject
 from .task_utils import apply_task_settings, with_gpu
 from .utils.cli import get_pipeline_commands_and_arguments, run_pipeline_command
-from .project import GCPProject
 
 PROJECT_NAME = "ML-ORCHESTRATOR"
 __version__ = "0.1.0"
@@ -28,7 +28,7 @@ logger = logger.bind(project_name=PROJECT_NAME, file_directory=str(LOG_PATH), fi
 __all__ = [
     "GCPProject",
     "GenericPipeline",
-    "PipelineConfig",
+    "PipelineSettings",
     "TaskSettings",
     "apply_task_settings",
     "with_gpu",

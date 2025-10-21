@@ -6,9 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 
 def main() -> None:
     """Renders a Jinja2 template to a Dockerfile."""
-    parser = argparse.ArgumentParser(
-        description="Render a Dockerfile from a Jinja2 template."
-    )
+    parser = argparse.ArgumentParser(description="Render a Dockerfile from a Jinja2 template.")
     parser.add_argument(
         "template_path",
         type=pathlib.Path,
@@ -19,10 +17,7 @@ def main() -> None:
         "--output",
         type=pathlib.Path,
         default="Dockerfile",
-        help=(
-            "Path to the output Dockerfile (default: Dockerfile in the current "
-            "directory)."
-        ),
+        help=("Path to the output Dockerfile (default: Dockerfile in the current directory)."),
     )
     args = parser.parse_args()
 

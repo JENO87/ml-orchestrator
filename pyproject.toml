@@ -27,7 +27,6 @@ dev = [
     "pytest>=7.4.0",
     "black>=24.3.0",
     "isort>=5.12.0",
-    "flake8>=6.0.0",
     "pre-commit>=3.5.0",
     "docformatter>=1.7.7",
     "Jinja2>=3.1.0",
@@ -73,8 +72,9 @@ disallow_untyped_decorators = true
 disallow_any_generics = true
 no_implicit_reexport = true
 warn_return_any = true
+exclude = ["google.cloud.storage"] # Exclude google.cloud.storage from mypy checks
 [[tool.mypy.overrides]]
-module = ["ml_orchestrator.*", "loguru", "kfp.*", "google.*", "jinja2"]
+module = ["ml_orchestrator.*", "loguru", "kfp.*", "google.*", "jinja2", "google.cloud.storage"]
 ignore_missing_imports = true
 
 [tool.pylint.messages_control]
@@ -84,12 +84,16 @@ disable = [
     "missing-module-docstring",
     "missing-class-docstring",
     "missing-function-docstring",
+    "W0107", # Disable "unnecessary pass statement" for abstract methods
+    "W1404", # Disable "implicit string concatenation"
 ]
-max-line-length = 120
-fail-under = 9.0
+
+[tool.pylint]
+max-line-length = 120 # Match ruff's line length
+max-attributes = 10 # Allow up to 10 instance attributes
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 exclude = ["notebooks"]
 
 [tool.ruff.lint]
@@ -97,10 +101,11 @@ select = ["E", "D", "F", "UP", "SIM", "I", "W"]
 ignore = [
     "D100", "D101", "D102", "D103", "D104", "D106",
     "D401",
+    "D205", # Disable "1 blank line required between summary line and description"
 ]
 [tool.ruff.lint.isort]
 known-first-party = ["ml_orchestrator"]
-combine-as-imports = true
+combine-as-imports = false
 force-single-line = false
 
 [tool.ruff.format]

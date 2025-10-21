@@ -1,5 +1,3 @@
-from typing import Optional
-
 def build_cron_expression(
     minute: str = "*",
     hour: str = "*",
@@ -20,10 +18,12 @@ def build_cron_expression(
         month: Month (1-12 or '*' or JAN-DEC).
         day_of_week: Day of week (0-6 or '*' or SUN-SAT, 0 and 7 are Sunday).
 
-    Returns:
+    Returns
+    -------
         A cron expression string.
 
-    Examples:
+    Examples
+    --------
         >>> build_cron_expression(minute="30", hour="3")
         '30 3 * * *'  # Daily at 3:30 AM UTC
         >>> build_cron_expression(minute="0", hour="9", day_of_week="1")

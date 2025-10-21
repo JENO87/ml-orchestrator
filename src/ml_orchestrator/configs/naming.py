@@ -48,10 +48,7 @@ class VarProjectResourceNames:
         """Initialize field values that depend on prefix and deploy_env."""
         self.deploy_env = self.deploy_env.lower()
         if self.deploy_env not in DEPLOY_ENV_NAMES:
-            raise ValueError(
-                f"deploy_env parameter ({self.deploy_env}) needs to be one of "
-                f"of {DEPLOY_ENV_NAMES}"
-            )
+            raise ValueError(f"deploy_env parameter ({self.deploy_env}) needs to be one of of {DEPLOY_ENV_NAMES}")
 
         self.gke_cluster = f"{self.deploy_env}-{self.prefix}-gke"
         self.artifact_registry = f"{self.deploy_env}-{self.prefix}-repo"

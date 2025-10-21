@@ -13,9 +13,7 @@ def apply_task_settings(task: PipelineTask, config: TaskSettings) -> None:
     task.set_caching_options(enable_caching=config.enable_caching)
 
 
-def with_gpu(
-    task: PipelineTask, gpu_type: str = "NVIDIA_TESLA_T4", count: int = 1
-) -> None:
+def with_gpu(task: PipelineTask, gpu_type: str = "NVIDIA_TESLA_T4", count: int = 1) -> None:
     """A helper function to attach a GPU to a pipeline task.
 
     Args:
@@ -24,6 +22,4 @@ def with_gpu(
                   "NVIDIA_TESLA_V100").
         count: The number of GPUs to attach.
     """
-    task.add_node_selector_constraint(
-        "cloud.google.com/gke-accelerator", gpu_type
-    ).set_gpu_limit(count)
+    task.add_node_selector_constraint("cloud.google.com/gke-accelerator", gpu_type).set_gpu_limit(count)

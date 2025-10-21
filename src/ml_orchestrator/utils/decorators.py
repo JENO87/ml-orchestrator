@@ -3,9 +3,7 @@ import logging
 from typing import Any, Callable
 
 # Configure basic logging to display INFO level messages
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
 def log_activity(func: Callable[..., Any]) -> Callable[..., Any]:

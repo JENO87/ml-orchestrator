@@ -12,21 +12,13 @@ class GCPConfig:
     """GCP-related configuration."""
 
     project_id: str | None = os.environ.get("GOOGLE_PROJECT_ID")
-    location: str | None = os.environ.get(
-        "GOOGLE_LOCATION", "us-central1"
-    )  # Equivalent to region
+    location: str | None = os.environ.get("GOOGLE_LOCATION", "us-central1")  # Equivalent to region
     secret_manager_project_id: str | None = os.environ.get("SECRET_MANAGER_PROJECT_ID")
     service_account_email: str | None = os.environ.get("GOOGLE_SERVICE_ACCOUNT_EMAIL")
-    service_account_key_path: str | None = os.environ.get(
-        "GOOGLE_APPLICATION_CREDENTIALS"
-    )
-    workload_identity_provider: str | None = os.environ.get(
-        "WORKLOAD_IDENTITY_PROVIDER"
-    )  # For GKE
+    service_account_key_path: str | None = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    workload_identity_provider: str | None = os.environ.get("WORKLOAD_IDENTITY_PROVIDER")  # For GKE
     bucket_name: str | None = os.environ.get("GOOGLE_BUCKET_NAME")
-    artifact_registry_host: str | None = os.environ.get(
-        "ARTIFACT_REGISTRY_HOST", "us-central1-docker.pkg.dev"
-    )
+    artifact_registry_host: str | None = os.environ.get("ARTIFACT_REGISTRY_HOST", "us-central1-docker.pkg.dev")
     artifact_registry_repo: str | None = os.environ.get("ARTIFACT_REGISTRY_REPO")
 
 
@@ -43,9 +35,7 @@ class BigQueryConfig:
     """BigQuery-related configuration."""
 
     dataset: str | None = os.environ.get("BIGQUERY_DATASET")
-    table: str | None = os.environ.get(
-        "BIGQUERY_TABLE"
-    )  # Optional, can be extended
+    table: str | None = os.environ.get("BIGQUERY_TABLE")  # Optional, can be extended
 
 
 @dataclass(frozen=True)
@@ -63,8 +53,5 @@ class Env:
         if not self.gcp.project_id:
             raise ValueError("GOOGLE_PROJECT_ID is required.")
         if self.deploy_env and self.deploy_env not in DEPLOY_ENV_NAMES:
-            raise ValueError(
-                f"Invalid deploy_env: {self.deploy_env}. "
-                f"Must be one of {DEPLOY_ENV_NAMES}."
-            )
+            raise ValueError(f"Invalid deploy_env: {self.deploy_env}. Must be one of {DEPLOY_ENV_NAMES}.")
         return True
