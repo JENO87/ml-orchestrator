@@ -4,7 +4,6 @@
 # Variables
 SRC = src
 PROJECT_NAME = ml-orchestrator
-PYTHON = C:\Users\J_Nor\AppData\Local\Programs\Python\Python313\python.exe
 VENV = .venv
 
 help:
@@ -14,7 +13,7 @@ install-uv:
 >where uv >nul 2>&1 || pip install uv
 
 venv:
->if not exist $(VENV) uv venv --python $(PYTHON) $(VENV)
+>test -d $(VENV) || uv venv $(VENV)
 
 activate:
 >powershell -Command "& '$(VENV)\Scripts\Activate.ps1'"
@@ -28,11 +27,12 @@ run-debug:
 sync:
 >uv sync --all-extras --no-reinstall --frozen
 
-install:
->powershell -Command "$$env:VIRTUAL_ENV='C:\Users\J_Nor\DataspellProjects\ml-orchestrator\.venv'; Invoke-Expression 'make install-uv'; Invoke-Expression 'make venv'; Invoke-Expression 'make sync'; Invoke-Expression 'make editable-install'; uv run pre-commit install; uv run pre-commit autoupdate"
+install: install-uv venv sync editable-install
+>uv run pre-commit install
+>uv run pre-commit autoupdate
 
 editable-install:
->uv pip install -e .[dev,test] --python $(PYTHON)
+>uv pip install -e .[dev,test]
 
 test:
 >uv run pytest tests/ --cov=$(PROJECT_NAME) --junitxml=report.xml
