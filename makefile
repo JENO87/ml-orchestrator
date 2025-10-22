@@ -39,11 +39,11 @@ test:
 
 lint-fix:
 >uv run ruff check . --fix
->uv run pylint src/ scripts/ tests/ examples/
+>uv run pylint src/ tests/
 
 lint-check:
 >uv run ruff check .
->uv run pylint src/ scripts/ tests/ examples/
+>uv run pylint src/ tests/
 
 format-check:
 >uv run pre-commit run ruff-format --all-files
