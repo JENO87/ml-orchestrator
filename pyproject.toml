@@ -119,3 +119,8 @@ convention = "numpy"
 python_files = ["test_*.py"]
 testpaths = ["tests"]
 addopts = "--cov=ml_orchestrator --cov-report=xml"
+
+[[tool.uv.index]]
+name = "github"
+url = "https://pkg.github.com/JENO87/ml-orchestrator/pypi"
+publish-url = "https://ghcr.io/api/v4/packages/pypi"

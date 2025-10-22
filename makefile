@@ -71,7 +71,7 @@ build-package:
 >uv build
 
 publish-package:
->uv publish --registry https://ghcr.io/api/v4/packages/pypi --token $(UV_PUBLISH_TOKEN)
+>uv publish --index github --token $(UV_PUBLISH_TOKEN)
 
 export:
 >uv pip compile pyproject.toml -o requirements.txt

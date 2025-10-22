@@ -152,4 +152,4 @@ jobs:
       - name: Publish to GitHub Packages
         run: make publish-package
         env:
-          UV_PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
