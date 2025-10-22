@@ -34,6 +34,8 @@ jobs:
       - &editable-install
         name: Editable install
         run: make editable-install
+      - name: Explicitly install flake8
+        run: uv pip install flake8
 
   run-linters:
     name: Run Linters
