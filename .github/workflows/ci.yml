@@ -139,7 +139,7 @@ jobs:
     name: Publish Package
     runs-on: ubuntu-latest
     needs: [ build-package ]
-    if: github.event_name == 'push' && (github.ref_name == 'quality' || github.ref_name == 'main')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref_name == 'quality' || github.ref_name == 'main'))
     steps:
       - *checkout
       - *install-uv
