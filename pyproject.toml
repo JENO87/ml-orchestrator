@@ -123,4 +123,5 @@ addopts = "--cov=ml_orchestrator --cov-report=xml"
 [[tool.uv.index]]
 name = "github"
 url = "https://pkg.github.com/JENO87/ml-orchestrator/pypi"
-publish-url = "https://npm.pkg.github.com/JENO87/ml-orchestrator/_registry/pypi/"
+publish-url = "https://pypi.pkg.github.com/JENO87/ml-orchestrator/_registry/pypi/"
+explicit = true  # Optional: Enforce this index for publishing
