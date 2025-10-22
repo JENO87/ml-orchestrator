@@ -52,7 +52,7 @@ format-check:
 >uv run ruff format --diff .
 
 type-check:
->uv run mypy .
+>uv run mypy src/ml_orchestrator \
 		--untyped-calls-exclude=google.oauth2.service_account \
 		--untyped-calls-exclude=google.auth \
 		--untyped-calls-exclude=google.cloud.aiplatform
@@ -78,20 +78,8 @@ publish-package:
 export:
 >uv pip compile pyproject.toml -o requirements.txt
 
-build-docker-image:
->docker build -t $(PROJECT_NAME):${DOCKER_TAG:-latest} .
-
-tag-docker-image:
->docker tag $(PROJECT_NAME):${DOCKER_TAG:-latest} $(REGISTRY):${DOCKER_TAG:-latest}
-
-push-docker-image:
->docker push $(REGISTRY):${DOCKER_TAG:-latest}
-
-clean-docker-image:
->docker rmi $(PROJECT_NAME):${DOCKER_TAG:-latest} $(REGISTRY):${DOCKER_TAG:-latest} -f --no-prune
-
 clean:
->Remove-Item -Recurse -Force -Path $(VENV),dist,*.egg-info,.pytest_cache,.mypy_cache,*.xml -ErrorAction SilentlyContinue
+>git clean -fdX
 
 ci:
 >gh workflow run ci.yml --field branch=$(git rev-parse --abbrev-ref HEAD)

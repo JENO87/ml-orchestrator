@@ -30,6 +30,9 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^\.mypy_cache/
       - id: end-of-file-fixer
+        exclude: ^\.mypy_cache/
       - id: check-yaml
       - id: check-added-large-files
+        exclude: ^\.mypy_cache/

@@ -2,7 +2,7 @@
 
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import google.auth
@@ -156,7 +156,7 @@ class GCPProject:
     @staticmethod
     def version_now() -> str:
         """Get a path-friendly version from current UTC datetime."""
-        return datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S-%f")
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S-%f")
 
     def _get_prefix_and_deploy_env(self) -> tuple[str, str]:
         """Get prefix and deploy env from project ID or env vars.
