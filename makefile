@@ -10,7 +10,7 @@ help:
 >powershell -Command "Get-Content Makefile | Select-String '^[a-zA-Z0-9_-]+:' | ForEach-Object { $$_.Line.Split(':')[0] } | Sort-Object | ForEach-Object { Write-Output $$_ }"
 
 install-uv:
->where uv >nul 2>&1 || pip install uv
+>command -v uv >/dev/null 2>&1 || pip install uv
 
 venv:
 >test -d $(VENV) || uv venv $(VENV)
