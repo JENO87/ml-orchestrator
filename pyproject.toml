@@ -36,6 +36,7 @@ test = [
     "mypy>=1.11.0",
     "pylint>=3.0.0",
     "ruff>=0.6.0",
+    "flake8>=6.0.0", # Add this line
     "pytest>=7.4.0",
     "pytest-cov>=5.0.0",
     "pytest-mock>=3.0.0",
