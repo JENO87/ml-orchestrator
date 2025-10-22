@@ -8,12 +8,12 @@ from typing import Optional
 import google.auth
 from google.api_core.exceptions import NotFound
 
-# isort: skip
-from google.cloud import (
-    aiplatform,
-    secretmanager,
-    storage,  # type: ignore
-)
+# isort: off
+from google.cloud import aiplatform
+from google.cloud import secretmanager
+from google.cloud import storage  # type: ignore
+# isort: on
+
 from google.oauth2 import service_account
 from loguru import logger
 

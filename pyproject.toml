@@ -107,6 +107,7 @@ ignore = [
 known-first-party = ["ml_orchestrator"]
 combine-as-imports = false
 force-single-line = false
+single-line-exclusions = ["google.cloud"]
 
 [tool.ruff.format]
 quote-style = "double"
