@@ -1,28 +1,17 @@
-name: CI/CD Pipeline
+name: CI Pipeline
+
 
 on:
   push:
-    branches: [development]  # Add development for lightweight runs
+    branches: [ "main", "development", "quality" ]
   pull_request:
-    branches: [quality, main]
+    branches: [ "main", "development", "quality" ]
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment (development, quality, main)'
+      branch:
+        description: 'Branch to build'
         required: true
-        type: choice
-        options: [development, quality, main]
-        default: development
-
-  #push:
-  #  branches: [main, development]
-  #  tags: ['v*']  # Triggers on tags like v1.0.0
-  #pull_request:
-  #  branches: [main, development]
-
-# In build-docker, tag-docker, push-docker, clean-after-push jobs
-env:
-   DOCKER_PREFIX: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch == 'development' && 'dev-' || github.ref_name == 'quality' && 'qa-' || github.ref_name == 'main' && '' }}
+        default: 'development'
 
 # Define reusable steps with YAML anchors
 defaults:
@@ -54,12 +43,8 @@ jobs:
       - *checkout
       - *install-uv
       - *sync-deps
-      - &run-pre-commit
-        name: Run pre-commit
-        run: make pre-commit
-      - &run-linters
-        name: Run linters
-        run: make lint
+      - name: Run lint checks
+        run: make lint-check
 
   check-formatting:
     name: Check Formatting
@@ -168,64 +153,3 @@ jobs:
         run: make publish-package
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-docker-image:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: [ build-package, export-requirements ]
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref_name == 'quality' || github.ref_name == 'main'))
-    steps:
-      - *checkout
-      - *install-uv
-      - *sync-deps
-      - name: Download requirements
-        uses: actions/download-artifact@v4
-        with:
-          name: requirements
-          path: .
-      - name: Build Docker image
-        run: make build-docker-image
-        env:
-          DOCKER_TAG: ${{ env.DOCKER_PREFIX }}${{ env.VERSION }}
-
-  tag-docker-image:
-    name: Tag Docker Image
-    runs-on: ubuntu-latest
-    needs: [ build-docker-image ]
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref_name == 'quality' || github.ref_name == 'main'))
-    steps:
-      - *checkout
-      - name: Tag Docker image
-        run: make tag-docker-image
-        env:
-          DOCKER_TAG: ${{ env.DOCKER_PREFIX }}${{ env.VERSION }}
-
-  push-docker-image:
-    name: Push Docker Image
-    runs-on: ubuntu-latest
-    needs: [ tag-docker-image ]
-    if: github.event_name == 'push' && (github.ref_name == 'quality' || github.ref_name == 'main')
-    steps:
-      - *checkout
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push Docker image
-        run: make push-docker-image
-        env:
-          DOCKER_TAG: ${{ env.DOCKER_PREFIX }}${{ env.VERSION }}
-
-  clean-after-push:
-    name: Clean Docker Images
-    runs-on: ubuntu-latest
-    needs: [ push-docker-image ]
-    if: github.event_name == 'push' && (github.ref_name == 'quality' || github.ref_name == 'main')
-    steps:
-      - *checkout
-      - name: Clean Docker images
-        run: make clean-docker-image
-        env:
-          DOCKER_TAG: ${{ env.DOCKER_PREFIX }}${{ env.VERSION }}

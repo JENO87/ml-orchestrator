@@ -37,8 +37,13 @@ editable-install:
 test:
 >uv run pytest tests/ --cov=$(PROJECT_NAME) --junitxml=report.xml
 
-lint:
+lint-fix:
 >uv run ruff check . --fix
+>uv run flake8 src/ scripts/ tests/ examples/
+>uv run pylint src/ scripts/ tests/ examples/
+
+lint-check:
+>uv run ruff check .
 >uv run flake8 src/ scripts/ tests/ examples/
 >uv run pylint src/ scripts/ tests/ examples/
 

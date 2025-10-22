@@ -1,165 +1,111 @@
-from argparse import (
-    Action,
-    ArgumentDefaultsHelpFormatter,
-    ArgumentError,
-    ArgumentParser,
-)
-from argparse import (
-    Namespace as ArgparseNamespace,
-)
+"""Provide functions for parsing command line strings into Python objects."""
+
+from argparse import Action, ArgumentError, ArgumentParser
+from argparse import Namespace as argparseNamespace
 from collections.abc import Sequence
 from typing import Any
 
-from loguru import logger
-
-from ml_orchestrator.configs.abstractions import PipelineSettings
-from ml_orchestrator.pipeline_assembly import GenericPipeline
-
 
 class ArgParseKeyValuePairs(Action):
-    """Argparse action to split KEY=VALUE arguments into a dictionary."""
+    """
+    argparse action to split a KEY=VALUE argument and append the pairs to a dictionary.
+
+    This custom action is designed to parse command-line arguments provided in
+    'key=value' format. It collects multiple such pairs and stores them as a
+    dictionary in the argparse namespace. This is particularly useful for
+    passing dynamic parameters or configurations to a pipeline.
+
+    Example Usage:
+        parser.add_argument(
+            '--params',
+            nargs='*',
+            action=ArgParseKeyValuePairs,
+            help='Pass key=value pairs, e.g., --params learning_rate=0.01 epochs=10'
+        )
+    """
 
     def __call__(
         self,
         parser: ArgumentParser,
-        namespace: ArgparseNamespace,
+        namespace: argparseNamespace,
         values: str | Sequence[Any] | None,
         option_string: str | None = None,
     ) -> None:
-        """Parse a single KEY=VALUE argument and append to a dictionary.
-
-        Args:
-            parser: The ArgumentParser containing this action.
-            namespace: The Namespace object for parsed arguments.
-            values: The command-line arguments, with type conversions applied.
-            option_string: The option string invoking this action.
         """
+        Action object used to parse a single argument from one or more strings from the command line.
+
+        Parameters
+        ----------
+        parser: ArgumentParser
+            The ArgumentParser object which contains this action.
+        namespace: Any
+            The Namespace object that will be returned by parse_args().
+        values: Union[str, Sequence, None]
+            The associated command-line arguments, with any type conversions applied.
+            Expected to be a list of 'key=value' strings.
+        option_string: Optional[str]
+            The option string that was used to invoke this action (e.g., '--branch').
+        """
+        # Retrieve any previously parsed key-value pairs for this destination
         previous = getattr(namespace, self.dest, None) or {}
-        try:
-            added = dict(map(lambda x: x.split("="), values))  # type: ignore[arg-type]
-        except ValueError as exc:
-            raise ArgumentError(
-                self,
-                f"Could not parse --{self.dest} with value '{{values}}' as k1=v1 k2=v2 format",
-            ) from exc
+        if values is None:
+            added = {}
+        else:
+            try:
+                # Ensure values is treated as a sequence of strings
+                added = dict(map(lambda x: x.split("="), values if isinstance(values, Sequence) else [values]))
+            except ValueError as exc:
+                # Raise an ArgumentError if parsing fails (e.g., not in 'key=value' format)
+                raise ArgumentError(
+                    self,
+                    f"Could not parse optional argument --{self.dest} with value '{values}' as k1=v1 k2=v2 ... format",
+                ) from exc
+        # Merge new key-value pairs with any existing ones
         merged = {**previous, **added}
+        # Set the merged dictionary as the attribute in the namespace
         setattr(namespace, self.dest, merged)
 
 
 class ArgParseUnderscoreToSpace(Action):
-    """Argparse action to convert underscores to spaces in cron expressions."""
+    """
+    argparse action to convert underscores to spaces.
+
+    This custom action is useful for command-line arguments where spaces are
+    significant (e.g., cron expressions), but passing them directly in a shell
+    might be problematic without proper quoting. By using underscores in the
+    command line, this action automatically converts them to spaces.
+
+    Example Usage:
+        parser.add_argument(
+            '--expression',
+            action=ArgParseUnderscoreToSpace,
+            help='Cron expression, e.g., "0_0_*_*_*" will become "0 0 * * *"'
+        )
+    """
 
     def __call__(
         self,
         parser: ArgumentParser,
-        namespace: ArgparseNamespace,
+        namespace: argparseNamespace,
         values: str | Sequence[Any] | None,
         option_string: str | None = None,
     ) -> None:
-        """Parse a single argument, converting underscores to spaces.
-
-        Args:
-            parser: The ArgumentParser containing this action.
-            namespace: The Namespace object for parsed arguments.
-            values: The command-line arguments, with type conversions applied.
-            option_string: The option string invoking this action.
         """
+        Action object used to parse a single argument from one or more strings from the command line.
+
+        Parameters
+        ----------
+        parser: ArgumentParser
+            The ArgumentParser object which contains this action.
+        namespace: Namespace
+            The Namespace object that will be returned by parse_args().
+        values: str | Sequence[Any] | None
+            The associated command-line arguments, with any type conversions applied.
+            Expected to be a single string.
+        option_string: str | None
+            The option string that was used to invoke this action (e.g., '--expression').
+        """
+        # Check if the value is a string (to please linting and ensure correct operation)
         if isinstance(values, str):
+            # Replace underscores with spaces and set the attribute in the namespace
             setattr(namespace, self.dest, values.replace("_", " "))
-
-
-def get_pipeline_commands_and_arguments(description: str, pipeline_settings: PipelineSettings) -> ArgumentParser:
-    """Set up command-line arguments for GCP Vertex AI/Kubeflow pipeline operations.
-
-    Supports commands: submit, schedule.
-
-    Args:
-        description: Help text to display before argument help.
-        pipeline_config: The PipelineConfig object containing pipeline metadata.
-
-    Returns
-    -------
-        ArgumentParser: Parser for command-line arguments.
-    """
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter, description=description)
-
-    subparsers = parser.add_subparsers(
-        title=f"{pipeline_settings.pipeline_display_name} Pipeline Commands",
-        description=pipeline_settings.pipeline_description,
-        dest="command",
-        metavar="{schedule,submit}",
-        required=True,
-        help="One command is mandatory.",
-    )
-
-    # Schedule command
-    parser_schedule = subparsers.add_parser(
-        "schedule",
-        formatter_class=ArgumentDefaultsHelpFormatter,
-        help=(f"Create or update schedule for '{pipeline_settings.pipeline_display_name}' pipeline."),
-    )
-    parser_schedule.add_argument(
-        "--expression",
-        required=True,
-        action=ArgParseUnderscoreToSpace,
-        help=(
-            "Cron expression for the schedule (NCronTab format, CET timezone). "
-            "Format: 'MINUTES HOURS DAYS MONTHS DAYS-OF-WEEK'. "
-            "Example: '15 16 * * 1' for 4:15 PM CET every Monday. "
-            "Use underscores (e.g., '15_16_*_*_1') for shell compatibility."
-        ),
-    )
-
-    # Submit command
-    parser_submit = subparsers.add_parser(
-        "submit",
-        formatter_class=ArgumentDefaultsHelpFormatter,
-        help=f"Submit '{pipeline_settings.pipeline_display_name}' pipeline.",
-    )
-    parser_submit.add_argument(
-        "--only-validate",
-        action="store_true",
-        help="Compile pipeline but do not submit.",
-    )
-    parser_submit.add_argument(
-        "--wait-for-completion",
-        action="store_true",
-        help="Wait for pipeline completion.",
-    )
-
-    return parser
-
-
-def run_pipeline_command(pipeline: GenericPipeline, arguments: ArgparseNamespace) -> None:
-    """Run the specified pipeline command using the provided arguments.
-
-    Args:
-        pipeline: The GenericPipeline instance to execute.
-        arguments: Parsed command-line arguments.
-
-    Raises
-    ------
-        ValueError: If an unknown command is specified.
-        AttributeError: If a required method or attribute is missing.
-        Exception: For deployment or other operation failures.
-    """
-    try:
-        if arguments.command == "submit":
-            logger.info(f"Executing submit command for pipeline '{pipeline.config.pipeline_display_name}'")
-            pipeline.submit(
-                only_validate=arguments.only_validate,
-                wait_for_completion=arguments.wait_for_completion,
-            )
-        elif arguments.command == "schedule":
-            logger.info(f"Executing schedule command for pipeline '{pipeline.config.pipeline_display_name}'")
-            pipeline.schedule(
-                cron_expression=arguments.expression,
-            )
-        else:
-            raise ValueError(f"Unknown command: {arguments.command}")
-    except AttributeError as e:
-        logger.error(f"Unknown method/attribute: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Pipeline command failed: {e}")
-        raise

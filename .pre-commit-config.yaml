@@ -18,7 +18,14 @@ repos:
         entry: uv run mypy
         language: system
         types: [python]
-        args: ["--untyped-calls-exclude=google.oauth2.service_account", "--untyped-calls-exclude=google.auth", "--untyped-calls-exclude=google.cloud.aiplatform"]
+        args: ["--package", "ml_orchestrator", "--untyped-calls-exclude=google.oauth2.service_account", "--untyped-calls-exclude=google.auth", "--untyped-calls-exclude=google.cloud.aiplatform"]
+        pass_filenames: false
+      - id: show-diff-on-modify
+        name: Show Diff on Modified Files
+        entry: cmd /c "git diff --exit-code || (echo \"Changes detected by pre-commit hooks. Review the diff above.\" && exit 1)"
+        language: system
+        always_run: true
+        pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
