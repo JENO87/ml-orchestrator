@@ -39,12 +39,10 @@ test:
 
 lint-fix:
 >uv run ruff check . --fix
->uv run flake8 src/ scripts/ tests/ examples/
 >uv run pylint src/ scripts/ tests/ examples/
 
 lint-check:
 >uv run ruff check .
->uv run flake8 src/ scripts/ tests/ examples/
 >uv run pylint src/ scripts/ tests/ examples/
 
 format-check:
