@@ -71,7 +71,7 @@ build-package:
 >uv build
 
 publish-package:
->@uv publish --publish-url https://pypi.github.com/JENO87/ml-orchestrator/ --token$(UV_PUBLISH_TOKEN)
+>@uv publish --publish-url https://pypi.github.com/JENO87/ml-orchestrator/ --token ${UV_PUBLISH_TOKEN}
 
 export:
 >uv pip compile pyproject.toml -o requirements.txt
