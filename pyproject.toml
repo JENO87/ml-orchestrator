@@ -57,7 +57,6 @@ path = "src/ml_orchestrator/__init__.py"
 packages = ["src/ml_orchestrator"]
 
 
-
 [tool.mypy]
 python_version = "3.11"
 strict = true
@@ -122,6 +121,6 @@ addopts = "--cov=ml_orchestrator --cov-report=xml"
 
 [[tool.uv.index]]
 name = "github"
-url = "https://pkg.github.com/JENO87/ml-orchestrator/pypi"
-publish-url = "https://pypi.pkg.github.com/JENO87/ml-orchestrator/_registry/pypi/"
-explicit = true  # Optional: Enforce this index for publishing
+url = "https://pypi.pkg.github.com/JENO87/"
+publish-url = "https://pypi.pkg.github.com/JENO87/"
+explicit = true
