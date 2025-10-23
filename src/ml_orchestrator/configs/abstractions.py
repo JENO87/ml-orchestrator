@@ -124,3 +124,14 @@ class TaskSettings:
     cpu_limit: str = "1"
     memory_limit: str = "4G"
     enable_caching: bool = True
+
+
+@dataclass(frozen=True)
+class SubmitSettings:
+    """Settings for a pipeline submission."""
+
+    experiment_name: str
+    only_validate: bool = False
+    wait_for_completion: bool = False
+    wipe_repository_path: bool = False
+    branch: Optional[dict[str, str]] = None

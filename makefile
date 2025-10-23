@@ -1,5 +1,5 @@
 .RECIPEPREFIX = >
-.PHONY: install-uv venv activate sync install test lint format-check type-check scan-deps build-package publish-package export build-docker-image tag-docker-image push-docker-image clean-docker-image pre-commit clean editable-install ci show-project-structure
+.PHONY: install-uv venv activate sync install test lint format-check type-check scan-deps build-package export build-docker-image tag-docker-image push-docker-image clean-docker-image pre-commit clean editable-install ci show-project-structure
 
 # Variables
 SRC = src
@@ -69,9 +69,6 @@ pre-commit:
 
 build-package:
 >uv build
-
-publish-package:
->@uv publish --publish-url https://pypi.pkg.github.com/JENO87/ml-orchestrator/ --token ${UV_PUBLISH_TOKEN}
 
 export:
 >uv pip compile pyproject.toml -o requirements.txt

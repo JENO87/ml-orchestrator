@@ -22,6 +22,7 @@ from typing import Any
 
 from loguru import logger
 
+from .configs import SubmitSettings
 from .utils.cli import ArgParseKeyValuePairs, ArgParseUnderscoreToSpace
 
 
@@ -242,14 +243,15 @@ def run_pipeline_command(pipeline: Any, arguments: argparseNamespace) -> None:
     try:
         # Dispatch based on the 'command' attribute set by subparsers
         if arguments.command == "submit":
-            # Call the submit method of the pipeline instance with parsed arguments
-            pipeline.submit(
-                arguments.experiment_name,
-                arguments.only_validate,
-                arguments.wait_for_completion,
-                arguments.wipe_repository_path,
-                arguments.branch,
+            # Instantiate the settings dataclass from the parsed arguments
+            settings = SubmitSettings(
+                experiment_name=arguments.experiment_name,
+                only_validate=arguments.only_validate,
+                wait_for_completion=arguments.wait_for_completion,
+                wipe_repository_path=arguments.wipe_repository_path,
+                branch=arguments.branch,
             )
+            pipeline.submit(settings)
         elif arguments.command == "schedule":
             # Call the schedule method of the pipeline instance with parsed arguments
             pipeline.schedule(

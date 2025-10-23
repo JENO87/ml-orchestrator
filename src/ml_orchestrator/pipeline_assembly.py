@@ -1,4 +1,7 @@
+import tempfile
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any, Optional
 
 from google.cloud import aiplatform
 from google.cloud.aiplatform import PipelineJobSchedule
@@ -6,7 +9,7 @@ from kfp import compiler
 from kfp.dsl.base_component import BaseComponent
 from loguru import logger
 
-from ml_orchestrator.configs.abstractions import PipelineSettings
+from ml_orchestrator.configs.abstractions import PipelineSettings, SubmitSettings
 from ml_orchestrator.project import GCPProject
 
 
@@ -41,7 +44,7 @@ class GenericPipeline(ABC, GCPProject):
         self.vertex_client = aiplatform  # Expose the aiplatform client for direct use if needed
 
     @abstractmethod
-    def _create_pipeline_job(self) -> BaseComponent:
+    def _create_pipeline_job(self, **kwargs: Any) -> BaseComponent:
         """Abstract method that must be implemented by any child class.
 
         This method is responsible for defining and returning the actual Kubeflow
@@ -51,6 +54,10 @@ class GenericPipeline(ABC, GCPProject):
         The leading underscore (`_`) indicates that this method is intended for
         internal use by the `GenericPipeline` class and its subclasses. It's not
         meant to be called directly by external code, promoting encapsulation.
+
+        Args:
+            **kwargs: Forwards arguments from the CLI, such as `branch` or `wipe_repo`,
+                      to the concrete pipeline implementation.
 
         Example implementation in a child class:
         ```python
@@ -72,7 +79,9 @@ class GenericPipeline(ABC, GCPProject):
             def __init__(self, config: PipelineSettings):
                 super().__init__(config)
 
-            def _create_pipeline_job(self) -> BaseComponent:
+            def _create_pipeline_job(self, **kwargs) -> BaseComponent:
+                # kwargs might contain {'branch': {'my-repo': 'feature-branch'}}
+                print(f"Arguments from CLI: {kwargs}")
                 return my_kfp_pipeline
         ```
 
@@ -83,7 +92,7 @@ class GenericPipeline(ABC, GCPProject):
         """
         raise NotImplementedError("Child class must implement _create_pipeline_job method.")
 
-    def submit(self, only_validate: bool = False, wait_for_completion: bool = False) -> None:
+    def submit(self, settings: SubmitSettings) -> None:
         """Compiles the KFP pipeline and optionally submits it to Vertex AI
         for execution.
 
@@ -92,26 +101,21 @@ class GenericPipeline(ABC, GCPProject):
         to create and run a PipelineJob.
 
         Args:
-            only_validate: If True, the pipeline will be compiled to a YAML
-                           specification, but it will NOT be submitted to Vertex AI.
-                           Useful for checking pipeline syntax and structure locally.
-            wait_for_completion: If True, the method will block until the submitted
-                                 pipeline run finishes (either successfully or with
-                                  a failure). This is useful for synchronous execution
-                                   or debugging.
+            settings: A dataclass containing all settings for the submission,
+                      such as experiment name, validation options, and branches.
         """
         logger.info("Setting up Kubeflow pipeline job for submission.")
 
         # 1. Get the KFP pipeline function from the child class implementation
-        pipeline_func = self._create_pipeline_job()
+        pipeline_func = self._create_pipeline_job(branch=settings.branch, wipe_repo=settings.wipe_repository_path)
 
         # 2. Compile the KFP pipeline function into a YAML specification
-        # The YAML file defines the pipeline's structure, components, and dependencies.
-        pipeline_spec_path = f"/tmp/{self.config.pipeline_display_name}.yaml"
+        temp_dir = Path(tempfile.gettempdir())
+        pipeline_spec_path = str(temp_dir / f"{self.config.pipeline_display_name}.yaml")
         compiler.Compiler().compile(pipeline_func, pipeline_spec_path)
         logger.info(f"Pipeline compiled to: {pipeline_spec_path}")
 
-        if not only_validate:
+        if not settings.only_validate:
             logger.info(f"Submitting pipeline '{self.config.pipeline_display_name}' to Vertex AI.")
 
             # 3. Create a Vertex AI PipelineJob instance
@@ -123,7 +127,7 @@ class GenericPipeline(ABC, GCPProject):
                 input_artifacts=self.config.input_artifacts,
                 enable_caching=self.config.enable_caching,
                 encryption_spec_key_name=self.config.encryption_spec_key_name,
-                labels={**{"experiment": self.config.experiment_name}, **self.config.labels},
+                labels={**{"experiment": settings.experiment_name}, **self.config.labels},
                 project=self.env.gcp.project_id,
                 location=self.env.gcp.location,
                 failure_policy=self.config.failure_policy,
@@ -137,49 +141,37 @@ class GenericPipeline(ABC, GCPProject):
                 f"{self.env.gcp.location}/pipelines/runs/{job.name}?project={self.env.gcp.project_id}"
             )
 
-            if wait_for_completion:
+            if settings.wait_for_completion:
                 logger.info("Waiting for pipeline completion...")
-                # Blocks until the pipeline run finishes.
                 job.wait()
                 logger.info(f"Pipeline '{job.display_name}' completed with state: {job.state}")
         else:
             logger.info("Validation completed, not submitting pipeline.")
 
-    def schedule(self, cron_expression: str) -> None:
+    def schedule(
+        self,
+        name: str,
+        expression: str,
+        display_name: Optional[str],
+    ) -> None:
         """Schedules the pipeline using GCP Vertex AI Pipeline Schedules.
 
         This method allows you to set up recurring executions of your pipeline
-        based on a cron expression. It first creates a PipelineJob definition
-        that acts as a template, and then wraps it in a PipelineJobSchedule.
-
-        Why create another PipelineJob here instead of scheduling the one from `submit`?
-        --------------------------------------------------------------------------------
-        The `submit` function creates an `aiplatform.PipelineJob` object that represents
-        a *single, immediate execution* of a pipeline. Once that execution is done,
-        that specific `PipelineJob` instance has fulfilled its purpose.
-
-        A Vertex AI Pipeline Schedule, however, defines a *template for future executions*.
-        It doesn't schedule a past or currently running job. Instead, it needs a blueprint
-        of *what* pipeline to run *each time the schedule triggers*. The `pipeline_job_instance`
-        created within this `schedule` method serves precisely this purpose: it's the
-        template that the scheduler will use to launch new pipeline runs repeatedly.
-
-        In essence:
-        - `submit`: "Run this pipeline *now*, once."
-        - `schedule`: "Run this pipeline *repeatedly* according to this cron, using this
-                      `PipelineJob` as the blueprint for each new run."
+        based on a cron expression.
 
         Args:
-            cron_expression: A cron expression string that defines the frequency
-                             and timing of the scheduled pipeline runs (e.g., "0 0 * * *" for daily at midnight UTC).
+            name: The unique name for the schedule.
+            expression: A cron expression string for the schedule.
+            display_name: The display name of the schedule in the Vertex AI console.
         """
-        logger.info("Setting up pipeline schedule.")
+        logger.info(f"Setting up pipeline schedule '{name}'.")
 
         # 1. Get the KFP pipeline function from the child class implementation
         pipeline_func = self._create_pipeline_job()
 
         # 2. Compile the KFP pipeline function into a YAML specification
-        pipeline_spec_path = f"/tmp/{self.config.pipeline_display_name}.yaml"
+        temp_dir = Path(tempfile.gettempdir())
+        pipeline_spec_path = str(temp_dir / f"{self.config.pipeline_display_name}.yaml")
         compiler.Compiler().compile(pipeline_func, pipeline_spec_path)
         logger.info(f"Pipeline compiled to: {pipeline_spec_path}")
 
@@ -199,14 +191,15 @@ class GenericPipeline(ABC, GCPProject):
         )
 
         # 4. Create a PipelineJobSchedule instance
+        schedule_display_name = display_name or f"{self.config.pipeline_display_name}-schedule"
         pipeline_job_schedule_instance = PipelineJobSchedule(
             pipeline_job=pipeline_job_instance,
-            display_name=f"{self.config.pipeline_display_name}-schedule",
+            display_name=schedule_display_name,
         )
 
         # 5. Call create() on the PipelineJobSchedule instance to activate the schedule
         pipeline_job_schedule_instance.create(
-            cron=cron_expression,
+            cron=expression,
             # Optional: max_concurrent_run_count, max_run_count, start_time, end_time
         )
         logger.info(f"Created schedule: {pipeline_job_schedule_instance.name}")
