@@ -109,7 +109,9 @@ jobs:
       - *editable-install
       - name: Extract version
         id: get-version
-        run: echo "VERSION=$(python -c 'from ml_orchestrator import __version__; print(__version__)')" >> $GITHUB_ENV
+        run: |
+          VERSION=$(hatch version)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
       - name: Build package
         run: make build-package
       - name: Upload package artifacts
@@ -117,6 +119,32 @@ jobs:
         with:
           name: package
           path: dist/*
+
+  push-package:
+    name: Push Package to GCP Artifact Registry
+    runs-on: ubuntu-latest
+    needs: [ build-package ]
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref_name, 'v'))
+    steps:
+      - *checkout
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: package
+          path: dist/
+      - name: Load environment variables
+        run: |
+          echo "REGION=${{ secrets.REGION }}" >> $GITHUB_ENV
+          echo "PROJECT=${{ secrets.PROJECT }}" >> $GITHUB_ENV
+          echo "REPOSITORY=${{ secrets.REPOSITORY }}" >> $GITHUB_ENV
+      - name: Publish package to GCP Artifact Registry
+        run: |
+          python -m twine upload --repository-url https://${{ env.REGION }}-python.pkg.dev/${{ env.PROJECT }}/${{ env.REPOSITORY}}/ dist/* \
+            -u _json_key_base64 \
+            -p ${{ secrets.GCP_SERVICE_ACCOUNT_BASE64 }} \
+            --verbose
+        env:
+          TWINE_REPOSITORY_URL: https://${{ env.REGION }}-python.pkg.dev/${{ env.PROJECT }}/${{ env.REPOSITORY}}/
 
   export-requirements:
     name: Export Requirements

@@ -1,7 +1,7 @@
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.1  # Use the latest version of ruff
+    rev: v0.14.2  # Use the latest version of ruff
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]

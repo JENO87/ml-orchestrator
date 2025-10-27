@@ -1,7 +1,7 @@
 from kfp.dsl import PipelineTask
 
 from .configs import TaskSettings
-from .utils.decorators import log_activity
+from .utils import log_activity
 
 
 @log_activity

@@ -1,83 +1,76 @@
+# Enforce bash shell for cross-platform compatibility
+SHELL := /bin/bash
 .RECIPEPREFIX = >
-.PHONY: install-uv venv activate sync install test lint format-check type-check scan-deps build-package export build-docker-image tag-docker-image push-docker-image clean-docker-image pre-commit clean editable-install ci show-project-structure
+.PHONY: help install-uv venv activate sync install test lint format-check type-check scan-deps build-package export pre-commit clean editable-install ci show-project-structure install-trivy
 
 # Variables
 SRC = src
 PROJECT_NAME = ml-orchestrator
 VENV = .venv
+PYTHON = $(VENV)/bin/python
 
-help:
->powershell -Command "Get-Content Makefile | Select-String '^[a-zA-Z0-9_-]+:' | ForEach-Object { $$_.Line.Split(':')[0] } | Sort-Object | ForEach-Object { Write-Output $$_ }"
+# ==============================================================================
+# HELP
+# ==============================================================================
 
-install-uv:
->command -v uv >/dev/null 2>&1 || pip install uv
+help: ## Shows this help message
+> @grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
-venv:
->test -d $(VENV) || uv venv $(VENV)
+# ==============================================================================
+# DEVELOPMENT LIFECYCLE
+# ==============================================================================
 
-activate:
->powershell -Command "& '$(VENV)\Scripts\Activate.ps1'"
+install: editable-install ## Install project and all development dependencies
+> uv run pre-commit install
+> uv run pre-commit autoupdate
 
-check-env:
->powershell -Command "Write-Output 'PYTHONPATH: $$env:PYTHONPATH'; Write-Output 'Current Dir: $$(Get-Location)'"
+editable-install: venv ## Install project in editable mode with dev/test extras
+> uv pip install -e .[dev,test]
 
-run-debug:
->powershell -Command "$$env:PYTHONPATH='$(SRC)'; uv run python -m pdb '$(RUN)'"
+test: ## Run all tests with pytest
+> uv run pytest tests/ --cov=$(PROJECT_NAME) --junitxml=report.xml
 
-sync:
->uv sync --all-extras --no-reinstall --frozen
+lint-check: ## Check for linting errors with ruff and pylint
+> uv run ruff check .
+> uv run pylint src/ tests/
 
-install: install-uv venv sync editable-install
->uv run pre-commit install
->uv run pre-commit autoupdate
+type-check: ## Check type hints with mypy
+> uv run mypy src/
 
-editable-install:
->uv pip install -e .[dev,test]
+pre-commit: ## Run all pre-commit hooks on all files
+> uv run pre-commit run --all-files
 
-test:
->uv run pytest tests/ --cov=$(PROJECT_NAME) --junitxml=report.xml
+# ==============================================================================
+# BUILD & UTILITIES
+# ==============================================================================
 
-lint-fix:
->uv run ruff check . --fix
->uv run pylint src/ tests/
+build-package: ## Build the python wheel and source distribution
+> uv run hatch build
 
-lint-check:
->uv run ruff check .
->uv run pylint src/ tests/
+version: ## Show the current project version
+> uv run hatch version
 
-format-check:
->uv run pre-commit run ruff-format --all-files
->uv run ruff format --diff .
+export: ## Export dependencies to requirements.txt
+> uv pip compile pyproject.toml -o requirements.txt
 
-type-check:
->uv run mypy src/ml_orchestrator \
-		--untyped-calls-exclude=google.oauth2.service_account \
-		--untyped-calls-exclude=google.auth \
-		--untyped-calls-exclude=google.cloud.aiplatform
+scan-deps: export install-trivy ## Scan exported dependencies for vulnerabilities
+> trivy fs --format json --output trivy-report.json requirements.txt
 
-mypy-paths:
->uv run mypy --python-path . scripts/
+clean: ## Remove all build artifacts and temporary files
+> rm -rf build dist .mypy_cache .pytest_cache .ruff_cache *.egg-info
 
-scan-deps:
->trivy fs --format json --output trivy-report.json requirements.txt
+show-project-structure: ## Show the project's file structure
+> find . -not -path '*/\.*' -not -path '*__pycache__*' | sort
 
-pre-commit:
->uv pip install pre-commit
->uv run pre-commit install
->uv run pre-commit autoupdate
->uv run pre-commit run --all-files
+# ==============================================================================
+# INTERNAL TARGETS
+# ==============================================================================
 
-build-package:
->uv build
+install-trivy: ## Install trivy if it's not already present
+> command -v trivy >/dev/null 2>&1 || choco install trivy -y
 
-export:
->uv pip compile pyproject.toml -o requirements.txt
+install-uv: ## Install uv if it's not already present
+> command -v uv >/dev/null 2>&1 || pip install uv
 
-clean:
->git clean -fdX
-
-ci:
->gh workflow run ci.yml --field branch=$(git rev-parse --abbrev-ref HEAD)
-
-show-project-structure:
->Get-ChildItem -Recurse | Select-Object FullName
+venv: install-uv ## Create a virtual environment if it doesn't exist
+> test -d $(VENV) || uv venv $(VENV)

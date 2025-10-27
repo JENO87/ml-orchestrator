@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 
@@ -124,6 +124,22 @@ class TaskSettings:
     cpu_limit: str = "1"
     memory_limit: str = "4G"
     enable_caching: bool = True
+
+
+@dataclass(frozen=True)
+class ComponentSpec(ABC):
+    """A base dataclass for component specifications."""
+
+    component_name: str
+    base_image: str
+    script_name: str
+    packages_to_install: list[str] = field(default_factory=list)
+    args: list[str] = field(default_factory=list)  # Runtime args for the script
+
+    @abstractmethod
+    def get_build_config(self) -> tuple[str, list[str], str]:
+        """Return the build configuration: script URL, target path, and command."""
+        pass
 
 
 @dataclass(frozen=True)

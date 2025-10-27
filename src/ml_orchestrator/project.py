@@ -5,8 +5,10 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
+# pylint: disable=ungrouped-imports
 import google.auth
 from google.api_core.exceptions import NotFound
+from kfp import Client  # Added for Kubeflow Pipelines
 
 # isort: off
 from google.cloud import aiplatform
@@ -31,6 +33,7 @@ class GCPProject:
     _credentials: google.auth.credentials.Credentials | None = None
     _storage_client: storage.Client | None = None
     _secret_manager_client: secretmanager.SecretManagerServiceClient | None = None
+    _kfp_client: Client | None = None  # Added for Kubeflow Pipelines client
 
     def __init__(self, from_config: bool = False):
         """Initialize GCPProject.
@@ -67,6 +70,15 @@ class GCPProject:
         else:
             logger.warning("No secret_manager_project_id or project_id set; skipping Secret Manager init.")
 
+        # New: Initialize KFP Client
+        if self.env.gcp.project_id and self.env.gcp.location:
+            logger.debug("Initialize KFP client...")
+            GCPProject._kfp_client = Client(
+                host=f"https://{self.env.gcp.location}-kfp.googleapis.com", credentials=GCPProject._credentials
+            )
+        else:
+            logger.warning("No project_id or location set; skipping KFP client init.")
+
         self._prefix, self._deploy_env = self._get_prefix_and_deploy_env()
         self.resources = VarProjectResourceNames(prefix=self._prefix, deploy_env=self._deploy_env)
 
@@ -84,6 +96,11 @@ class GCPProject:
     def secret_manager_client(self) -> secretmanager.SecretManagerServiceClient | None:
         """Get the Secret Manager client."""
         return GCPProject._secret_manager_client
+
+    @property
+    def kfp_client(self) -> Client | None:
+        """Get the KFP client."""
+        return GCPProject._kfp_client
 
     @property
     def prefix(self) -> str:
