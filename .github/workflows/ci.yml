@@ -19,8 +19,8 @@ defaults:
     shell: bash
 
 jobs:
-  install-dependencies:
-    name: Install Dependencies
+  run-linters:
+    name: Run Linters
     runs-on: ubuntu-latest
     steps:
       - &checkout
@@ -28,65 +28,49 @@ jobs:
       - &install-uv
         name: Install UV
         run: make install-uv
-      - &sync-deps
-        name: Sync dependencies
-        run: make sync
       - &editable-install
         name: Editable install
         run: make editable-install
-
-  run-linters:
-    name: Run Linters
-    runs-on: ubuntu-latest
-    needs: [install-dependencies]
-    steps:
-      - *checkout
-      - *install-uv
-      - *sync-deps
       - name: Run lint checks
         run: make lint-check
 
   check-formatting:
     name: Check Formatting
     runs-on: ubuntu-latest
-    needs: [install-dependencies]
     steps:
       - *checkout
       - *install-uv
-      - *sync-deps
+      - *editable-install
       - name: Check formatting
         run: make format-check
 
   run-type-checking:
     name: Run Type Checking
     runs-on: ubuntu-latest
-    needs: [install-dependencies]
     steps:
       - *checkout
       - *install-uv
-      - *sync-deps
+      - *editable-install
       - name: Run type checking
         run: make type-check
 
   run-unit-tests:
     name: Run Unit Tests
     runs-on: ubuntu-latest
-    needs: [install-dependencies]
     steps:
       - *checkout
       - *install-uv
-      - *sync-deps
+      - *editable-install
       - name: Run unit tests
         run: make test
 
   generate-coverage-report:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
-    needs: [install-dependencies]
     steps:
       - *checkout
       - *install-uv
-      - *sync-deps
+      - *editable-install
       - name: Generate coverage report
         run: make test
       - name: Upload coverage report
@@ -100,12 +84,11 @@ jobs:
   build-package:
     name: Build Package
     runs-on: ubuntu-latest
-    needs: [ install-dependencies, run-linters, check-formatting, run-type-checking, run-unit-tests ]
+    needs: [ run-linters, check-formatting, run-type-checking, run-unit-tests ]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref_name == 'quality' || github.ref_name == 'main'))
     steps:
       - *checkout
       - *install-uv
-      - *sync-deps
       - *editable-install
       - name: Extract version
         id: get-version
@@ -154,7 +137,7 @@ jobs:
     steps:
       - *checkout
       - *install-uv
-      - *sync-deps
+      - *editable-install
       - name: Export requirements
         run: make export
       - name: Upload requirements

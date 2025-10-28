@@ -5,6 +5,7 @@ Contains variable PROJECT_NAME.
 
 from .cli import get_pipeline_commands_and_arguments, run_pipeline_command
 from .configs import Env, PipelineSettings, TaskSettings, VarProjectResourceNames
+from .configs.abstractions import BaseVarTemplateComponent, VarTemplateComponent
 from .pipeline_assembly import GenericPipeline
 from .project import GCPProject
 from .task_utils import apply_task_settings, with_gpu
@@ -23,6 +24,8 @@ __all__ = [
     "with_gpu",
     "Env",
     "VarProjectResourceNames",
+    "BaseVarTemplateComponent",
+    "VarTemplateComponent",
     "get_pipeline_commands_and_arguments",
     "run_pipeline_command",
 ]

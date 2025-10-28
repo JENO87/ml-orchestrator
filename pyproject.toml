@@ -86,6 +86,8 @@ disable = [
     "missing-function-docstring",
     "W0107", # Disable "unnecessary pass statement" for abstract methods
     "W1404", # Disable "implicit string concatenation"
+    "broad-exception-caught",
+    "protected-access",
 ]
 
 [tool.pylint]
@@ -95,6 +97,7 @@ max-attributes = 10 # Allow up to 10 instance attributes
 [tool.ruff]
 line-length = 120
 exclude = ["notebooks"]
+target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "D", "F", "UP", "SIM", "I", "W"]

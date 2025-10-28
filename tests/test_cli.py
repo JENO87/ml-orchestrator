@@ -8,6 +8,7 @@ from ml_orchestrator.cli import (
     get_pipeline_commands_and_arguments,
     run_pipeline_command,
 )
+from ml_orchestrator.configs import SubmitSettings
 
 
 class TestArgParseKeyValuePairs(unittest.TestCase):
@@ -142,8 +143,15 @@ class TestRunPipelineCommand(unittest.TestCase):
             wipe_repository_path=True,
             branch={"repo": "branch"},
         )
+        expected_settings = SubmitSettings(
+            experiment_name="test-exp",
+            only_validate=True,
+            wait_for_completion=False,
+            wipe_repository_path=True,
+            branch={"repo": "branch"},
+        )
         run_pipeline_command(self.mock_pipeline, args)
-        self.mock_pipeline.submit.assert_called_once_with("test-exp", True, False, True, {"repo": "branch"})
+        self.mock_pipeline.submit.assert_called_once_with(expected_settings)
 
     def test_schedule_command_calls_pipeline_schedule(self) -> None:
         args = Namespace(

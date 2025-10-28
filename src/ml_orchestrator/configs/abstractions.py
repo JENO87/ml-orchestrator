@@ -1,6 +1,11 @@
+import os
+import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any, Optional, cast
+
+import tomllib
 
 
 # --- Abstract Contract for Overall Pipeline Settings ---
@@ -10,6 +15,13 @@ class PipelineSettings(ABC):
     Concrete implementations must provide values for the abstract properties.
     This class also provides default values for optional PipelineJob parameters,
     which can be overridden by concrete implementations.
+
+    All concrete pipeline settings must inherit from this class.
+    Centralizes:
+    - Registry
+    - GCS paths
+    - Experiment tracking
+    - Runtime behavior
     """
 
     @property
@@ -127,19 +139,106 @@ class TaskSettings:
 
 
 @dataclass(frozen=True)
-class ComponentSpec(ABC):
-    """A base dataclass for component specifications."""
+class BaseVarTemplateComponent(ABC):
+    """
+    Defines the project-wide registry and the common source for component code.
+    In a wrapper project, you will create a concrete implementation of this,
+    setting the registry and ONE of either the repo URL or the package spec.
+    """
+
+    registry: str
+
+    # --- Choose ONE source mode for your project ---
+    # For projects where scripts are pulled from a git repo
+    source_repo_url: Optional[str]  # e.g., "https://raw.githubusercontent.com/my-org/my-repo/main"
+
+    # For projects where code is installed from a Python package
+    source_package_spec: Optional[str]  # e.g., "my-package @ git+https://github.com/my-org/my-package.git@main"
+
+
+@dataclass(frozen=True)
+class VarTemplateComponent(BaseVarTemplateComponent, ABC):
+    """Configuration for a single, buildable component."""
 
     component_name: str
     base_image: str
-    script_name: str
-    packages_to_install: list[str] = field(default_factory=list)
-    args: list[str] = field(default_factory=list)  # Runtime args for the script
+    run_command: list[str]
 
-    @abstractmethod
-    def get_build_config(self) -> tuple[str, list[str], str]:
-        """Return the build configuration: script URL, target path, and command."""
-        pass
+    # The path to the script, relative to the repo source. Only used in repo mode.
+    script_path: Optional[str] = None
+
+    # Optional arguments to append to the run command
+    args: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        """Validate configuration and load dependencies."""
+        # 1. Validate the component source configuration
+        is_repo_mode = self.source_repo_url is not None
+        is_package_mode = self.source_package_spec is not None
+
+        if not is_repo_mode ^ is_package_mode:
+            raise ValueError(
+                f"The Base Class for '{self.component_name}' must define either 'source_repo_url' "
+                f"or 'source_package_spec', but not both."
+            )
+
+        if is_repo_mode and not self.script_path:
+            raise ValueError(
+                f"Component '{self.component_name}' is using a repo source but is missing the 'script_path' attribute."
+            )
+
+        # 2. Load dependencies from pyproject.toml
+        component_deps = self._get_component_deps()
+        object.__setattr__(self, "packages_to_install", component_deps)
+
+    @property
+    def full_script_url(self) -> str:
+        """Constructs the full raw GitHub URL for the script."""
+        if not self.source_repo_url or not self.script_path:
+            raise AttributeError("full_script_url is only available for repo-sourced components.")
+        # Use rstrip to ensure there's exactly one slash
+        return f"{self.source_repo_url.rstrip('/')}/{self.script_path.lstrip('/')}"
+
+    @property
+    def target_path(self) -> str:
+        """The path where the script will be placed inside the container."""
+        if not self.script_path:
+            raise AttributeError("target_path is only available for script-based components.")
+        return f"/scripts/{Path(self.script_path).name}"
+
+    def _get_component_deps(self) -> list[str]:
+        """Load optional deps from pyproject.toml."""
+        path = Path(__file__).resolve().parents[3] / "pyproject.toml"
+        with open(path, "rb") as f:
+            data: dict[str, Any] = tomllib.load(f)  # ← fixed dict type
+        optional = data.get("project", {}).get("optional-dependencies", {})
+        deps = optional.get(self.component_name.lower(), [])
+        return cast(list[str], deps)
+
+    def image_tag(self) -> str:
+        project = self._get_project_name()
+        version = self._get_version()
+        env = self._get_env()
+        name = f"{project}-{self.component_name}"
+        return f"{self.registry}/{name}-{env}:{version}"
+
+    def _get_project_name(self) -> str:
+        path = Path(__file__).resolve().parents[3] / "pyproject.toml"
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+        return cast(str, data["project"]["name"])
+
+    def _get_version(self) -> str:
+        """Get version from hatch."""
+        try:
+            result = subprocess.check_output(["hatch", "version"], text=True)
+            return result.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return "0.1.0"
+
+    def _get_env(self) -> str:
+        branch = os.getenv("BRANCH_NAME", "development")
+        return branch.split("/")[-1].lower()
 
 
 @dataclass(frozen=True)

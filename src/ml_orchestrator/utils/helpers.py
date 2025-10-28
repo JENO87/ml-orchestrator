@@ -1,48 +1,84 @@
 import functools
 import os
 import subprocess
-from typing import Any, Callable
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Callable, cast
 
+import tomllib
 from loguru import logger
 
-from ml_orchestrator.configs.abstractions import ComponentSpec
+from ml_orchestrator.configs.abstractions import VarTemplateComponent
 
 
-def create_docker_image(component_spec: ComponentSpec, registry: str) -> str:
-    """Generate Dockerfile and build/push Docker image based on component spec."""
-    script_url, target_paths, command = component_spec.get_build_config()
-    dockerfile_content = f"""FROM {component_spec.base_image}
+@lru_cache(maxsize=1)
+def _load_pyproject() -> dict[str, Any]:
+    """Load pyproject.toml from the repository root – works everywhere."""
+    # CI can force the path (optional safety net)
+    if override := os.getenv("PYPROJECT_TOML_PATH"):
+        path = Path(override)
+        if not path.is_file():
+            raise FileNotFoundError(f"PYPROJECT_TOML_PATH not found: {path}")
+        with path.open("rb") as f:
+            return tomllib.load(f)
+
+    # Walk up from this file
+    cur = Path(__file__).resolve()
+    for _ in range(10):
+        candidate = cur / "pyproject.toml"
+        if candidate.is_file():
+            with candidate.open("rb") as f:
+                return tomllib.load(f)
+        if cur == cur.parent:
+            break
+        cur = cur.parent
+    raise FileNotFoundError("pyproject.toml not found")
+
+
+def get_optional_deps(component_name: str) -> list[str]:
+    """Return the list from [project.optional-dependencies.<component_name>]."""
+    data = _load_pyproject()
+    deps = data.get("project", {}).get("optional-dependencies", {}).get(component_name.lower(), [])
+    return cast(list[str], deps)
+
+
+def create_docker_image(specs: VarTemplateComponent) -> str:
+    # --- Dockerfile Generation ---
+    dockerfile = f"""FROM {specs.base_image}
     WORKDIR /app
     """
-    # Install component-specific dependencies
-    if component_spec.packages_to_install:
-        dockerfile_content += (
-            f"RUN pip install --no-cache-dir ml-wrapper[{' '.join(component_spec.packages_to_install)}]\n"
+
+    # Add dependency installation from pyproject.toml
+    component_deps = specs._get_component_deps()
+    if component_deps:
+        project = specs._get_project_name()
+        deps = " ".join(component_deps)
+        dockerfile += f'RUN pip install --no-cache-dir "{project}[{deps}]"\n'
+
+    # Add command to get the component code into the image
+    if specs.source_repo_url:
+        # Source is a remote git repo, so we curl the file
+        dockerfile += (
+            f"RUN mkdir -p $(dirname {specs.target_path}) && curl -L {specs.full_script_url} -o {specs.target_path}\n"
         )
-    # Add RUN commands for each target path
-    for target_path in target_paths:
-        dockerfile_content += f"RUN mkdir -p /scripts && curl -L {script_url} -o {target_path}\n"
-    # Construct CMD with command and target path
-    cmd_args = [command]
-    if target_paths:
-        cmd_args.append(target_paths[0])
-    dockerfile_content += f"CMD {str(cmd_args)}\n"
-    with open(f"{component_spec.component_name}.Dockerfile", "w", encoding="utf-8") as f:
-        f.write(dockerfile_content)
-    # Get environment from branch (e.g., 'development' from 'feature/development')
-    env = os.environ.get("BRANCH_NAME", "development").split("/")[-1].lower()  # Default to 'development'
-    # Get version from pyproject.toml via hatch or CI environment variable
-    version = os.environ.get("VERSION", "0.1.0")  # Default to 0.1.0 if not set
-    # Construct image tag: repo_name-component-environment:version
-    if component_spec.component_name == "base":  # For base image
-        image_tag = f"{registry}/ml-wrapper-{env}:{version}"
-    else:  # For component images
-        image_tag = f"{registry}/ml-wrapper-{component_spec.component_name}-{env}:{version}"
-    subprocess.run(
-        ["docker", "build", "-f", f"Dockerfile.{component_spec.component_name}", "-t", image_tag, "."], check=True
-    )
-    subprocess.run(["docker", "push", image_tag], check=True)
-    return image_tag
+    elif specs.source_package_spec:
+        # Source is a Python package, so we pip install it
+        dockerfile += f'RUN pip install "{specs.source_package_spec}"\n'
+
+    # --- Build and Push ---
+    filename = f"Dockerfile.{specs.component_name}"
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(dockerfile)
+
+    tag = specs.image_tag()
+    try:
+        subprocess.run(["docker", "build", "-f", filename, "-t", tag, "."], check=True)
+        subprocess.run(["docker", "push", tag], check=True)
+    finally:
+        # Clean up the temporary Dockerfile
+        os.remove(filename)
+
+    return tag
 
 
 def log_activity(func: Callable[..., Any]) -> Callable[..., Any]:
