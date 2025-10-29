@@ -58,7 +58,9 @@ class GCPProject:
             credentials=GCPProject._credentials,
         )
 
-        GCPProject._storage_client = storage.Client(credentials=GCPProject._credentials)
+        GCPProject._storage_client = storage.Client(
+            project=self.env.gcp.project_id, credentials=GCPProject._credentials
+        )
 
         # New: Initialize Secret Manager if project_id available
         secret_project = self.env.gcp.secret_manager_project_id or self.env.gcp.project_id
@@ -70,14 +72,7 @@ class GCPProject:
         else:
             logger.warning("No secret_manager_project_id or project_id set; skipping Secret Manager init.")
 
-        # New: Initialize KFP Client
-        if self.env.gcp.project_id and self.env.gcp.location:
-            logger.debug("Initialize KFP client...")
-            GCPProject._kfp_client = Client(
-                host=f"https://{self.env.gcp.location}-kfp.googleapis.com", credentials=GCPProject._credentials
-            )
-        else:
-            logger.warning("No project_id or location set; skipping KFP client init.")
+        # KFP Client will be initialized lazily via the kfp_client property
 
         self._prefix, self._deploy_env = self._get_prefix_and_deploy_env()
         self.resources = VarProjectResourceNames(prefix=self._prefix, deploy_env=self._deploy_env)
@@ -99,7 +94,17 @@ class GCPProject:
 
     @property
     def kfp_client(self) -> Client | None:
-        """Get the KFP client."""
+        """Get the KFP client (initialized lazily)."""
+        if GCPProject._kfp_client is None:
+            if self.env.gcp.project_id and self.env.gcp.location:
+                logger.debug("Lazily initializing KFP client...")
+
+                GCPProject._kfp_client = Client(
+                    host=f"https://{self.env.gcp.location}-kfp.googleapis.com",
+                    credentials=cast(Any, GCPProject._credentials) # Cast to Any to satisfy MyPy
+                )
+            else:
+                logger.warning("No project_id or location set; KFP client cannot be initialized.")
         return GCPProject._kfp_client
 
     @property

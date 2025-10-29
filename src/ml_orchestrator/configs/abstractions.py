@@ -5,8 +5,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, cast
 
-import tomllib
-
 from ml_orchestrator.utils.helpers import _load_pyproject
 
 
@@ -222,9 +220,7 @@ class VarTemplateComponent(BaseVarTemplateComponent, ABC):
         return f"{self.registry}/{name}-{env}:{version}"
 
     def _get_project_name(self) -> str:
-        path = Path(__file__).resolve().parents[3] / "pyproject.toml"
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
+        data = _load_pyproject()
         return cast(str, data["project"]["name"])
 
     def _get_version(self) -> str:
