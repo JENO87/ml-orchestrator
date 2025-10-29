@@ -8,8 +8,6 @@ from typing import Any, Callable, cast
 import tomllib
 from loguru import logger
 
-from ml_orchestrator.configs.abstractions import VarTemplateComponent
-
 
 @lru_cache(maxsize=1)
 def _load_pyproject() -> dict[str, Any]:
@@ -42,7 +40,10 @@ def get_optional_deps(component_name: str) -> list[str]:
     return cast(list[str], deps)
 
 
-def create_docker_image(specs: VarTemplateComponent) -> str:
+def create_docker_image(specs: Any) -> str:
+    from ml_orchestrator.configs.abstractions import VarTemplateComponent  # pylint: disable=import-outside-toplevel
+
+    assert isinstance(specs, VarTemplateComponent), "specs must be an instance of VarTemplateComponent"
     # --- Dockerfile Generation ---
     dockerfile = f"""FROM {specs.base_image}
     WORKDIR /app
