@@ -7,6 +7,8 @@ from typing import Any, Optional, cast
 
 import tomllib
 
+from ml_orchestrator.utils.helpers import _load_pyproject
+
 
 # --- Abstract Contract for Overall Pipeline Settings ---
 class PipelineSettings(ABC):
@@ -207,9 +209,7 @@ class VarTemplateComponent(BaseVarTemplateComponent, ABC):
 
     def _get_component_deps(self) -> list[str]:
         """Load optional deps from pyproject.toml."""
-        path = Path(__file__).resolve().parents[3] / "pyproject.toml"
-        with open(path, "rb") as f:
-            data: dict[str, Any] = tomllib.load(f)  # ← fixed dict type
+        data = _load_pyproject()
         optional = data.get("project", {}).get("optional-dependencies", {})
         deps = optional.get(self.component_name.lower(), [])
         return cast(list[str], deps)
