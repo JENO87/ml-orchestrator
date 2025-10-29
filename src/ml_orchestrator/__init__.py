@@ -3,6 +3,8 @@
 Contains variable PROJECT_NAME.
 """
 
+import importlib.metadata
+
 from .cli import get_pipeline_commands_and_arguments, run_pipeline_command
 from .configs import Env, PipelineSettings, TaskSettings, VarProjectResourceNames
 from .configs.abstractions import BaseVarTemplateComponent, VarTemplateComponent
@@ -11,7 +13,14 @@ from .project import GCPProject
 from .task_utils import apply_task_settings, with_gpu
 
 PROJECT_NAME = "ML-ORCHESTRATOR"
-__version__ = "0.1.0"
+
+try:
+    __version__ = importlib.metadata.version(PROJECT_NAME)
+except importlib.metadata.PackageNotFoundError:
+    # If the package is not installed, we can't determine the version.
+    # This is common during development.
+    __version__ = "0.0.0.dev0"
+
 PROJECT_VERSION = __version__
 
 

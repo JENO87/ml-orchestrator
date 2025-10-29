@@ -1,6 +1,6 @@
 [project]
 name = "ml-orchestrator"
-dynamic = ["version"]  # Version is managed dynamically by hatch
+version = "0.1.0"
 description = "Scalable GCP Vertex AI pipeline orchestration wrapper using Kubeflow Pipelines"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -51,8 +51,7 @@ test = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.version]
-path = "src/ml_orchestrator/__init__.py"
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ml_orchestrator"]

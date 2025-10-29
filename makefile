@@ -74,3 +74,8 @@ install-uv: ## Install uv if it's not already present
 
 venv: install-uv ## Create a virtual environment if it doesn't exist
 > test -d $(VENV) || uv venv $(VENV)
+
+tag: ## Create a git tag with the project version
+> @VERSION=$$(grep "version =" pyproject.toml | head -n 1 | cut -d '"' -f 2); \
+> echo "Creating tag v$${VERSION}"; \
+> git tag -a "v$${VERSION}" -m "Release v$${VERSION}"
