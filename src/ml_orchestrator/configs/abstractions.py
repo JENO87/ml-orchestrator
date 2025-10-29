@@ -147,7 +147,7 @@ class BaseVarTemplateComponent(ABC):
     """
 
     registry: str
-
+    base_image: str
     # --- Choose ONE source mode for your project ---
     # For projects where scripts are pulled from a git repo
     source_repo_url: Optional[str]  # e.g., "https://raw.githubusercontent.com/my-org/my-repo/main"
@@ -161,7 +161,6 @@ class VarTemplateComponent(BaseVarTemplateComponent, ABC):
     """Configuration for a single, buildable component."""
 
     component_name: str
-    base_image: str
     run_command: list[str]
 
     # The path to the script, relative to the repo source. Only used in repo mode.
